@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, globalShortcut } from 'electron';
 
 /**
  * Set `__static` path to static files in production
@@ -30,7 +30,39 @@ function createWindow () {
   })
 }
 
-app.on('ready', createWindow)
+/*
+ * Toggle visibility of mainWindow.
+ *
+ * References:
+ *  - https://github.com/electron/electron/issues/8734
+ */
+function toggleMainWindow() {
+  const isVisible = mainWindow.isVisible();
+  const isFocused = mainWindow.isFocused();
+
+  const setVisibilityScope = (bool) => {
+    mainWindow.setVisibleOnAllWorkspaces(bool);
+  };
+
+  if (isVisible) {
+    setVisibilityScope(true);
+
+    if (isFocused) {
+      mainWindow.hide();
+    } else {
+      mainWindow.focus();
+      setVisibilityScope(false);
+    }
+  } else {
+    mainWindow.show();
+    setVisibilityScope(false);
+  }
+}
+
+app.on('ready', () => {
+  createWindow();
+  globalShortcut.register('Control+H', toggleMainWindow);
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

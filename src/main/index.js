@@ -1,4 +1,11 @@
-import { app, BrowserWindow, globalShortcut } from 'electron';
+import {
+  app,
+  globalShortcut,
+  ipcMain,
+  BrowserWindow,
+  Menu,
+  MenuItem,
+} from 'electron';
 
 /**
  * Set `__static` path to static files in production
@@ -74,6 +81,23 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+ipcMain.on('register-shortcuts', (e, shortcuts) => {
+  const submenu = [];
+
+  shortcuts.forEach(({ accelerator, functionName }) => {
+    submenu.push({
+      accelerator,
+      click: () => e.sender.send('shortcuts-handler', functionName),
+    });
+  });
+
+  const menu = new Menu();
+  const menuItem = new MenuItem({ submenu });
+
+  menu.append(menuItem);
+  Menu.setApplicationMenu(menu);
 })
 
 /**

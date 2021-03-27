@@ -9,21 +9,51 @@
 </template>
 
 <script>
+import NeDB from 'nedb';
 import marked from 'marked';
+import { ipcRenderer } from 'electron';
 
 export default {
-  name: 'rapid-mdpad',
   data() {
     return {
+      db: null,
+      notes: [],
       text: '# Hello!',
     };
   },
-  computed: {
-    compiledMarkdown() {
-      return marked(this.text);
-    },
+  created() {
+    this.registerShortcuts();
+    this.initData();
   },
   methods: {
+    registerShortcuts() {
+      const shortcuts = [
+        {
+          accelerator: 'Cmd+S',
+          functionName: 'saveChange',
+        },
+      ];
+
+      ipcRenderer.send('register-shortcuts', shortcuts);
+      ipcRenderer.on('shortcuts-handler', (e, functionName) => {
+        this[functionName]();
+      });
+    },
+    initData() {
+      const DB = new NeDB({
+        filename: 'static/data/notes.db',
+        autoload: true,
+      });
+
+      DB.find({}, (err, docs) => {
+        if (err) {
+          console.error(err);
+        } else {
+          this.db = DB;
+          this.notes = docs;
+        }
+      });
+    },
     updateText(e) {
       this.text = e.target.value;
       this.handleEnter(e);
@@ -47,6 +77,14 @@ export default {
       }
 
       this.text += prefix;
+    },
+    saveChange() {
+      console.log('saveChange');
+    },
+  },
+  computed: {
+    compiledMarkdown() {
+      return marked(this.text);
     },
   },
 };

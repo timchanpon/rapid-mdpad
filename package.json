@@ -2,7 +2,7 @@
   "name": "rapid-mdpad",
   "version": "0.0.1",
   "author": "timchanpon <62697984+timchanpon@users.noreply.github.com>",
-  "description": "A simple memo application for quick note taking.",
+  "description": "A simple and rapid notepad with markdown syntax working on Electron.",
   "license": "MIT",
   "main": "./dist/electron/main.js",
   "scripts": {

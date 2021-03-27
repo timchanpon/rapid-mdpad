@@ -9,21 +9,60 @@
 </template>
 
 <script>
+import NeDB from 'nedb';
 import marked from 'marked';
+import { ipcRenderer } from 'electron';
 
 export default {
-  name: 'rapid-mdpad',
   data() {
     return {
-      text: '# Hello!',
+      notes: {
+        db: null,
+        data: [],
+      },
+      text: '',
+      noteId: null,
     };
   },
-  computed: {
-    compiledMarkdown() {
-      return marked(this.text);
-    },
+  created() {
+    this.initData();
+    this.registerShortcuts();
   },
   methods: {
+    initData() {
+      const notesDB = new NeDB({
+        filename: ipcRenderer.sendSync('get-nedb-filename-notes'),
+        autoload: true,
+      });
+
+      notesDB.find({}, (err, docs) => {
+        if (err) {
+          console.error(err);
+        } else {
+          this.notes.db = notesDB;
+          // this.notes.data = docs;
+
+          // Tentative
+          if (docs.length) {
+            this.text = docs[0].text;
+            this.noteId = docs[0]._id;
+          }
+        }
+      });
+    },
+    registerShortcuts() {
+      const shortcuts = [
+        {
+          accelerator: 'Cmd+S',
+          functionName: 'saveChange',
+        },
+      ];
+
+      ipcRenderer.send('register-shortcuts', shortcuts);
+      ipcRenderer.on('shortcuts-handler', (e, functionName) => {
+        this[functionName]();
+      });
+    },
     updateText(e) {
       this.text = e.target.value;
       this.handleEnter(e);
@@ -47,6 +86,23 @@ export default {
       }
 
       this.text += prefix;
+    },
+    saveChange() {
+      if (this.noteId) {
+        this.notes.db.update(
+          { _id: this.noteId },
+          { $set: { text: this.text } }
+        );
+      } else {
+        this.notes.db.insert({
+          text: this.text,
+        });
+      }
+    },
+  },
+  computed: {
+    compiledMarkdown() {
+      return marked(this.text);
     },
   },
 };

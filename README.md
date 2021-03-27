@@ -1,6 +1,6 @@
-# rapid-mdpad
+# Rapid MD Pad
 
-> An electron-vue project
+> A simple and rapid notepad with markdown syntax working on Electron.
 
 #### Build Setup
 

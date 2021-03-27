@@ -1,4 +1,11 @@
-import { app, BrowserWindow } from 'electron'
+import {
+  app,
+  globalShortcut,
+  ipcMain,
+  BrowserWindow,
+  Menu,
+  MenuItem,
+} from 'electron';
 
 /**
  * Set `__static` path to static files in production
@@ -30,7 +37,39 @@ function createWindow () {
   })
 }
 
-app.on('ready', createWindow)
+/*
+ * Toggle visibility of mainWindow.
+ *
+ * References:
+ *  - https://github.com/electron/electron/issues/8734
+ */
+function toggleMainWindow() {
+  const isVisible = mainWindow.isVisible();
+  const isFocused = mainWindow.isFocused();
+
+  const setVisibilityScope = (bool) => {
+    mainWindow.setVisibleOnAllWorkspaces(bool);
+  };
+
+  if (isVisible) {
+    setVisibilityScope(true);
+
+    if (isFocused) {
+      mainWindow.hide();
+    } else {
+      mainWindow.focus();
+      setVisibilityScope(false);
+    }
+  } else {
+    mainWindow.show();
+    setVisibilityScope(false);
+  }
+}
+
+app.on('ready', () => {
+  createWindow();
+  globalShortcut.register('Control+H', toggleMainWindow);
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -42,6 +81,34 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+// IPC
+function getNeDBFilePath(fileName) {
+  const userDataPath = app.getPath('userData');
+
+  return `${userDataPath}/nedb_data/${fileName}.nedb`;
+}
+
+ipcMain.on('get-nedb-filename-notes', (e) => {
+  e.returnValue = getNeDBFilePath('notes');
+})
+
+ipcMain.on('register-shortcuts', (e, shortcuts) => {
+  const submenu = [];
+
+  shortcuts.forEach(({ accelerator, functionName }) => {
+    submenu.push({
+      accelerator,
+      click: () => e.sender.send('shortcuts-handler', functionName),
+    });
+  });
+
+  const menu = new Menu();
+  const menuItem = new MenuItem({ submenu });
+
+  menu.append(menuItem);
+  Menu.setApplicationMenu(menu);
 })
 
 /**

@@ -16,16 +16,40 @@ import { ipcRenderer } from 'electron';
 export default {
   data() {
     return {
-      db: null,
-      notes: [],
-      text: '# Hello!',
+      notes: {
+        db: null,
+        data: [],
+      },
+      text: '',
+      noteId: null,
     };
   },
   created() {
-    this.registerShortcuts();
     this.initData();
+    this.registerShortcuts();
   },
   methods: {
+    initData() {
+      const notesDB = new NeDB({
+        filename: ipcRenderer.sendSync('get-nedb-filename-notes'),
+        autoload: true,
+      });
+
+      notesDB.find({}, (err, docs) => {
+        if (err) {
+          console.error(err);
+        } else {
+          this.notes.db = notesDB;
+          // this.notes.data = docs;
+
+          // Tentative
+          if (docs.length) {
+            this.text = docs[0].text;
+            this.noteId = docs[0]._id;
+          }
+        }
+      });
+    },
     registerShortcuts() {
       const shortcuts = [
         {
@@ -37,21 +61,6 @@ export default {
       ipcRenderer.send('register-shortcuts', shortcuts);
       ipcRenderer.on('shortcuts-handler', (e, functionName) => {
         this[functionName]();
-      });
-    },
-    initData() {
-      const DB = new NeDB({
-        filename: 'static/data/notes.db',
-        autoload: true,
-      });
-
-      DB.find({}, (err, docs) => {
-        if (err) {
-          console.error(err);
-        } else {
-          this.db = DB;
-          this.notes = docs;
-        }
       });
     },
     updateText(e) {
@@ -79,7 +88,16 @@ export default {
       this.text += prefix;
     },
     saveChange() {
-      console.log('saveChange');
+      if (this.noteId) {
+        this.notes.db.update(
+          { _id: this.noteId },
+          { $set: { text: this.text } }
+        );
+      } else {
+        this.notes.db.insert({
+          text: this.text,
+        });
+      }
     },
   },
   computed: {

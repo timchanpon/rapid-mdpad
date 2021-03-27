@@ -83,6 +83,17 @@ app.on('activate', () => {
   }
 })
 
+// IPC
+function getNeDBFilePath(fileName) {
+  const userDataPath = app.getPath('userData');
+
+  return `${userDataPath}/nedb_data/${fileName}.nedb`;
+}
+
+ipcMain.on('get-nedb-filename-notes', (e) => {
+  e.returnValue = getNeDBFilePath('notes');
+})
+
 ipcMain.on('register-shortcuts', (e, shortcuts) => {
   const submenu = [];
 
